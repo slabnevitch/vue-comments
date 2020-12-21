@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css">
+	<style>
+		.wrapper {
+  padding: 15px 30px;
+  max-width: 504px;
+  margin: 0 auto;
+  background: #FDFFEC;
+  border-radius: 5px;
+  border-left: 5px solid #7AC016;
+}
+
+h3 {
+  color: #7AC016;
+}
+
+.input-form {
+  margin-top: 15px;
+  border-bottom: 1px solid #E0E0E0;
+  border-top: 1px solid #E0E0E0;
+}
+.input-form input {
+  width: 100%;
+  padding: 11px 0;
+  font-size: 16px;
+  line-height: 22px;
+  border: none;
+}
+.input-form__buttons {
+  margin-bottom: 12px;
+}
+
+.comments {
+  margin-top: 13px;
+}
+
+.comment {
+  margin-bottom: 16px;
+}
+.comment:last-child {
+  margin-bottom: 0;
+}
+
+.comment-data__name,
+.comment-data__date {
+  display: inline-block;
+}
+
+.delete-menu {
+  padding-left: 30px;
+  padding-right: 30px;
+  text-align: center;
+}
+
+	</style>
+</head>
+<body>
+	<div class="wrapper" id="app">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-6">
+        <h3><strong>Подумать</strong></h3>
+        <h3>Продавец</h3>
+      </div>
+      <div class="col-6">
+        <button type="button" class="btn btn-success">Сменить этап подбора</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-12">
+        <div class="input-form">
+          <input type="text" name="comment" placeholder="Написать комментарий" @focus="addPostFocus" v-model="addPostLogic.comment">
+          <div class="input-form__buttons" v-show="addPostLogic.inputIsTyped">
+            <button type="button" class="btn" :class="{'btn-secondary': isReadyToSend, 'btn-primary': !isReadyToSend}" @click="addPost" :disabled="isReadyToSend">СОХРАНИТЬ</button>
+            <button type="button" class="btn btn-outline-dark" @click="abortPost">ОТМЕНА</button>
+          </div>
+        </div>
+        <div class="comments">
+          <div class="comment" v-for="(post, ind) in posts" :key="`${post + ind}`">
+            <div class="comment-body" v-show="!post.showEditInput">{{post.text}}</div>
+            <input type="text" class="edited-comment" v-model="editPostLogic.currentPostText" v-show="post.showEditInput">
+            <div class="input-form__buttons comment-edit" v-show="post.showEditInput" >
+              <button type="button" class="btn" :class="{'btn-secondary': isReadyToSend, 'btn-primary': !isReadyToSend}" @click="editPost(post.id)" :disabled="equal(post.text)" >СОХРАНИТЬ</button>
+              <button type="button" class="btn btn-light" @click="post.showEditInput=false">ОТМЕНА</button>
+          </div>
+            <div class="comment-data">
+              <svg width="1em" height="1em" class="panel-open" viewBox="0 0 16 16" class="bi bi-person-fill" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+</svg>
+              <div class="comment-data__name">
+                <strong>{{post.user}}</strong>
+              </div>
+              <div class="comment-data__date">, {{post.date}}</div>
+              <svg @click="post.showDropdown=!post.showDropdown; hideOtherDropdowns(post.id)" width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-chevron-down" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+           <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+</svg>
+              <div class="dropdown">
+                <div class="dropdown-menu" :class="{show: post.showDropdown}" aria-labelledby="dropdownMenuButton">
+                  <a class="dropdown-item" @click="editClick(post)" href="#">Редактировать</a>
+                  <a class="dropdown-item" href="#" @click="post.showDeleteDropdown=true">Удалить</a>
+                </div>
+              </div>
+              <div class="dropdown">
+                <div class="dropdown-menu delete-menu" :class="{show: post.showDeleteDropdown}" aria-labelledby="dropdownMenuButton">
+                  <h5>Удаление комментария</h5>
+                  <hr>
+                  <button type="button" class="btn btn-danger" @click="deletePost(post.id)">Удалить</button>
+                  <button type="button" class="btn btn-outline-dark" @click="post.showDeleteDropdown=false">ОТМЕНА</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+<!--     <pre>{{posts}}</pre> -->
+  </div>
+</div>
+	
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js"></script>
+	<script>
+		new Vue({
+			el: '#app',
+			data: {
+				posts: [
+				{
+					id: '1',
+					user: 'Ольга Солошенко',
+					text: 'Взят в работу',
+					date: '',
+					showDropdown: false,
+					showEditInput: false,
+					showDeleteDropdown: false
+				}
+				],
+				postDefaultOpts: {
+					showDropdown: false,
+					showEditInput: false,
+					showDeleteDropdown: false
+				},
+				addPostLogic: {
+					comment: '',
+					inputIsTyped: false
+				},
+				editPostLogic: {
+					comment: '',
+					inputIsTyped: false,
+					currentPostText: '',
+					textEqual: false
+				}
+				
+			},
+  // watch: {
+  //   editPostLogic.currentPostText(){
+  //     console.log('currentPostText is edited')
+  //   }
+  // },
+  computed: {
+  	isReadyToSend(){
+  		return this.addPostLogic.comment === ''
+  	},
+  	isReadyToSave(){
+  		return this.editPostLogic.currentPostText
+  	}
+  },
+  methods: {
+  	onInput(){
+  		return this.addPostLogic.comment !== '' ? this.addPostLogic.inputIsTyped = true : this.addPostLogic.inputIsTyped = false;
+  	},
+  	addPostFocus(){
+  		this.addPostLogic.inputIsTyped = true
+  		this.posts.forEach((item) => {
+  			item.showDropdown = item.showEditInput = item.showDeleteDropdown = false
+  		})
+  	},
+  	addPost(){
+  		console.log('addPost')
+  		const options = {
+  			day: '2-digit',
+  			month: 'long'
+  		}
+  		const locale = 'ru-RU'
+  		const formattedDate =  new Intl.DateTimeFormat(locale, options).format(new Date())
+  		
+  		this.posts.push({
+  			id: (this.posts.length + 1).toString(),
+  			user: 'Василий Щерица',
+  			text: this.addPostLogic.comment,
+  			date: formattedDate,
+  			...this.postDefaultOpts
+  		})
+  		
+  		this.abortPost()
+  	},
+  	editPost(id){
+  		this.posts.forEach((item) => {
+  			if(item.id === id){
+  				item.text = this.editPostLogic.currentPostText
+  				item.showEditInput = false
+  			}
+  		})
+  	},
+  	deletePost(id){
+  		this.posts.forEach((item) => {
+  			if(item.id === id){
+  				console.log(this.posts.indexOf(item))
+  				this.posts.splice(this.posts.indexOf(item), 1)
+  			}
+  		})
+  	},
+  	abortPost(){
+  		this.addPostLogic.comment = ''
+  		this.addPostLogic.inputIsTyped = false
+  	},
+  	hideOtherDropdowns(id){
+  		console.log('post.id ' + id);
+  		this.posts.forEach((item) => {
+  			if(item.id !== id){
+  				item.showDropdown = false
+  			}
+  		})
+  	},
+  	editClick(post){
+  		post.showEditInput = true;
+  		post.showDropdown = false;
+  		this.editPostLogic.currentPostText = post.text
+  	},
+  	equal(text){
+      // console.log(text)
+      if(this.editPostLogic.currentPostText === ''){
+      	console.log('return false!')
+      	return true
+      } 
+      return text.toLowerCase() === this.editPostLogic.currentPostText.toLowerCase()
+    }
+  }
+  
+})
+	</script>
+</body>
+</html>
